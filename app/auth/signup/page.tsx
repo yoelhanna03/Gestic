@@ -1,19 +1,20 @@
 "use client";
 
-import React, { useState } from 'react';
-import { authClient } from '@/lib/auth-client';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import React, { useState } from "react";
+import { authClient } from "@/lib/auth-client";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function SignupPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   const [sent, setSent] = useState(false);
+
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
     setIsLoading(true);
@@ -24,17 +25,18 @@ export default function SignupPage() {
         email,
         password,
         name,
-        callbackURL: '/dashboard',
+        callbackURL: "/dashboard",
       });
 
       if (authError) {
-      if (authError) {
-        setError(authError.message || 'Une erreur est survenue lors de l\'inscription');
+        setError(
+          authError.message || "Une erreur est survenue lors de l'inscription",
+        );
       } else {
-        // Inform the user that a verification email was sent
         setSent(true);
       }
-      setError('Une erreur inattendue est survenue');
+    } catch (err) {
+      setError("Une erreur inattendue est survenue");
     } finally {
       setIsLoading(false);
     }
@@ -44,69 +46,77 @@ export default function SignupPage() {
     <div className="space-y-6">
       <div className="text-center space-y-1">
         <h2 className="text-xl font-bold">Créer un compte</h2>
-        <p className="text-sm text-muted-foreground">Rejoignez Gestic pour protéger vos documents</p>
+        <p className="text-sm text-muted-foreground">
+          Rejoignez Gestic pour protéger vos documents
+        </p>
       </div>
 
-      <form onSubmit={handleSignup} className="space-y-4">
       {sent ? (
         <div className="p-4 rounded-md bg-green-50 border border-green-200 text-green-700 text-sm">
-          Un e-mail de confirmation a été envoyé à <strong>{email}</strong>. Veuillez vérifier votre boîte de réception et cliquer sur le lien de confirmation avant d'accéder au dashboard.
+          Un e-mail de confirmation a été envoyé à <strong>{email}</strong>.
+          Veuillez vérifier votre boîte de réception et cliquer sur le lien de
+          confirmation avant d'accéder au dashboard.
         </div>
       ) : (
         <form onSubmit={handleSignup} className="space-y-4">
-          <label className="text-sm font-medium">Nom complet</label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            className="w-full p-2 rounded-md border border-border bg-background text-sm"
-            placeholder="Jean Dupont"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Email</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="w-full p-2 rounded-md border border-border bg-background text-sm"
-            placeholder="jean@example.com"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Mot de passe</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="w-full p-2 rounded-md border border-border bg-background text-sm"
-            placeholder="••••••••"
-          />
-        </div>
-
-        {error && (
-          <div className="p-3 rounded-md bg-red-50 border border-red-200 text-red-600 text-xs">
-            {error}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Nom complet</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              className="w-full p-2 rounded-md border border-border bg-background text-sm"
+              placeholder="Jean Dupont"
+            />
           </div>
-        )}
 
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="w-full py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
-        >
-          {isLoading ? 'Inscription...' : 'S\'inscrire'}
-        </button>
-      </form>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="w-full p-2 rounded-md border border-border bg-background text-sm"
+              placeholder="jean@example.com"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Mot de passe</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="w-full p-2 rounded-md border border-border bg-background text-sm"
+              placeholder="••••••••"
+            />
+          </div>
+
+          {error && (
+            <div className="p-3 rounded-md bg-red-50 border border-red-200 text-red-600 text-xs">
+              {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+          >
+            {isLoading ? "Inscription..." : "S'inscrire"}
+          </button>
+        </form>
+      )}
 
       <div className="text-center text-sm text-muted-foreground">
-        Déjà un compte ?{' '}
-        <Link href="/auth/signin" className="text-primary font-medium hover:underline">
+        Déjà un compte ?{" "}
+        <Link
+          href="/auth/signin"
+          className="text-primary font-medium hover:underline"
+        >
           Connectez-vous
         </Link>
       </div>
