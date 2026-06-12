@@ -8,10 +8,27 @@ const prisma = new PrismaClient();
 const resendApiKey = process.env.RESEND_API_KEY;
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
+function normalizeBaseUrl(input?: string) {
+  if (!input) return undefined;
+  let url = input.trim();
+  // Add protocol if missing. In production prefer https.
+  if (!/^https?:\/\//i.test(url)) {
+    url =
+      (process.env.NODE_ENV === "production" ? "https://" : "http://") + url;
+  }
+  // Force https in production
+  if (process.env.NODE_ENV === "production" && url.startsWith("http://")) {
+    url = url.replace(/^http:\/\//i, "https://");
+  }
+  // Remove trailing slash
+  url = url.replace(/\/$/, "");
+  return url;
+}
+
 const baseURL =
-  process.env.BETTER_AUTH_URL ||
-  process.env.NEXT_PUBLIC_APP_URL ||
-  "http://localhost:3000";
+  normalizeBaseUrl(
+    process.env.BETTER_AUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL,
+  ) || "http://localhost:3000";
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
