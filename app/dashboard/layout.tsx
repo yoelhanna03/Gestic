@@ -1,12 +1,23 @@
-import React from 'react';
-import { Sidebar } from '@/components/dashboard/Sidebar';
-import { Header } from '@/components/dashboard/Header';
+import React from "react";
+import { Sidebar } from "@/components/dashboard/Sidebar";
+import { Header } from "@/components/dashboard/Header";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const hdrs = await headers();
+  const headersObj = Object.fromEntries(hdrs.entries());
+  const session = await auth.api.getSession({ headers: headersObj });
+
+  if (!session) {
+    redirect("/auth/signin");
+  }
+
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar />

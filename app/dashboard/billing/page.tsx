@@ -1,0 +1,46 @@
+import React from "react";
+import { headers } from "next/headers";
+import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { PrismaClient } from "@prisma/client";
+import PortalButton from "./PortalButton";
+
+const prisma = new PrismaClient();
+
+export default async function BillingPage() {
+  const hdrs = await headers();
+  const headersObj = Object.fromEntries(hdrs.entries());
+  const session = await auth.api.getSession({ headers: headersObj });
+  if (!session) redirect("/auth/signin");
+
+  const user = session.user as any;
+  const familyId = user.familyId;
+
+  const subscription = await prisma.subscription.findUnique({
+    where: { familyId },
+  });
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Facturation</h1>
+        <p className="text-muted-foreground">
+          Gérez votre abonnement et accédez aux factures via Stripe.
+        </p>
+      </div>
+
+      <div className="bg-card p-6 rounded-2xl border border-border shadow-sm max-w-2xl">
+        <div className="mb-4">
+          <div className="text-sm text-muted-foreground">Plan actuel</div>
+          <div className="text-xl font-bold">
+            {subscription?.plan ?? "FREE"}
+          </div>
+        </div>
+
+        <div>
+          <PortalButton />
+        </div>
+      </div>
+    </div>
+  );
+}
