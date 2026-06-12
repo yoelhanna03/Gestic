@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+.pnpm
+.pnp
+dist/
+
+# Next.js
+.next/
+out/
+build/
+
+# Production
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Local env files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Prisma
+.prisma/
+# If you use a local SQLite DB, ignore the .db file
+*.db
+*.db-journal
+
+# OS files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.log
+
+# Better Auth / Session storage if any local
+.claude/
