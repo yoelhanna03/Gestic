@@ -1,5 +1,5 @@
 import { betterAuth } from "better-auth";
-import { prismaAdapter } from "better-auth/prisma-adapter";
+import { prismaAdapter } from "@better-auth/prisma-adapter";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();

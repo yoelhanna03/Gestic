@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = session.user;
+    const user = session.user as any;
     if (!user.familyId) {
       return NextResponse.json({ documents: [] }, { status: 200 });
     }
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = session.user;
+    const user = session.user as any;
 
     // 2. Validate Input
     const body = await req.json();
@@ -87,6 +87,7 @@ export async function POST(req: NextRequest) {
     const document = await prisma.document.create({
       data: {
         ...validatedData,
+        expirationDate: validatedData.expirationDate ? new Date(validatedData.expirationDate) : null,
         userId: user.id,
         familyId: familyId,
       },

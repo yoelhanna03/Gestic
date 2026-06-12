@@ -5,7 +5,7 @@ export const documentSchema = z.object({
   type: z.enum(["CONTRACT", "INVOICE", "INSURANCE", "IDENTITY", "TAX", "OTHER"]),
   fileUrl: z.string().url("L'URL du fichier doit être valide"),
   description: z.string().optional(),
-  expirationDate: z.string().pipe(z.coerce.date()).optional(),
+  expirationDate: z.string().optional(),
 });
 
 export type DocumentInput = z.infer<typeof documentSchema>;

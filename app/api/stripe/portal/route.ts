@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = session.user;
+    const user = session.user as any;
     if (!user.familyId) {
       return NextResponse.json({ error: "No family associated" }, { status: 400 });
     }

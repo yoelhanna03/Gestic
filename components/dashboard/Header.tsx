@@ -1,3 +1,5 @@
+"use client";
+
 import React from 'react';
 import { FaUserCircle, FaSignOutAlt } from 'react-icons/fa';
 

@@ -129,7 +129,7 @@ export default function NewDocumentPage() {
             <FaSave />
             {isSubmitting ? 'Enregistrement...' : 'Enregistrer le document'}
           </button>
-        </div}
+        </div>
       </form>
     </div>
   );

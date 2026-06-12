@@ -11,13 +11,18 @@
     "runinstall": "npm install && npm install  npm install next@latest react@latest react-dom@latest && npm install -D @types/react @types/react-dom"
   },
   "dependencies": {
+    "@better-auth/core": "^1.6.17",
+    "@better-auth/prisma-adapter": "^1.6.17",
+    "@hookform/resolvers": "^5.4.0",
     "@prisma/client": "^5.20.0",
     "better-auth": "latest",
+    "better-call": "^2.0.4",
     "lucide-react": "^0.440.0",
     "next": "^16.2.9",
     "next-auth": "^4.2.4",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "react-hook-form": "^7.78.0",
     "react-icons": "^5.2.1",
     "stripe": "^16.1.0",
     "tailwind-merge": "^2.5.2",
