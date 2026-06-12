@@ -17,6 +17,10 @@ export default async function DashboardLayout({
   if (!session) {
     redirect("/auth/signin");
   }
+  // Block access if the user's email is not verified
+  if (!(session.user as any)?.emailVerified) {
+    redirect("/auth/verify-email");
+  }
 
   return (
     <div className="flex h-screen overflow-hidden">

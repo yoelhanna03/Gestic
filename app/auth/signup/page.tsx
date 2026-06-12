@@ -13,6 +13,7 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
+  const [sent, setSent] = useState(false);
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
     setIsLoading(true);
@@ -27,11 +28,12 @@ export default function SignupPage() {
       });
 
       if (authError) {
+      if (authError) {
         setError(authError.message || 'Une erreur est survenue lors de l\'inscription');
       } else {
-        router.push('/dashboard');
+        // Inform the user that a verification email was sent
+        setSent(true);
       }
-    } catch (e) {
       setError('Une erreur inattendue est survenue');
     } finally {
       setIsLoading(false);
@@ -46,7 +48,12 @@ export default function SignupPage() {
       </div>
 
       <form onSubmit={handleSignup} className="space-y-4">
-        <div className="space-y-2">
+      {sent ? (
+        <div className="p-4 rounded-md bg-green-50 border border-green-200 text-green-700 text-sm">
+          Un e-mail de confirmation a été envoyé à <strong>{email}</strong>. Veuillez vérifier votre boîte de réception et cliquer sur le lien de confirmation avant d'accéder au dashboard.
+        </div>
+      ) : (
+        <form onSubmit={handleSignup} className="space-y-4">
           <label className="text-sm font-medium">Nom complet</label>
           <input
             type="text"
