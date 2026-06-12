@@ -5,6 +5,62 @@ import { Resend } from "resend";
 
 const prisma = new PrismaClient();
 
+// Proxy the Prisma client to intercept `account.create` calls.
+// This helps debug and auto-map common field names (e.g. providerAccountId -> providerUserId)
+const prismaProxy = new Proxy(prisma, {
+  get(target, prop, receiver) {
+    const orig = Reflect.get(target, prop, receiver);
+    if (prop === "account" && orig) {
+      return new Proxy(orig, {
+        get(acTarget, method, acReceiver) {
+          const origMethod = Reflect.get(acTarget, method, acReceiver);
+          if (method === "create" && typeof origMethod === "function") {
+            return async function (args: any) {
+              try {
+                const data = args?.data || {};
+                // If providerUserId is missing but providerAccountId is present, map it.
+                if (
+                  data &&
+                  !Object.prototype.hasOwnProperty.call(
+                    data,
+                    "providerUserId",
+                  ) &&
+                  Object.prototype.hasOwnProperty.call(
+                    data,
+                    "providerAccountId",
+                  )
+                ) {
+                  data.providerUserId = data.providerAccountId;
+                  args.data = data;
+                  console.warn(
+                    "[Prisma Proxy] Mapped providerAccountId -> providerUserId for account.create",
+                  );
+                }
+                // Log payload for debugging if providerUserId is still missing
+                if (
+                  data &&
+                  !Object.prototype.hasOwnProperty.call(data, "providerUserId")
+                ) {
+                  console.warn(
+                    "[Prisma Proxy] account.create called without providerUserId:",
+                    JSON.stringify(data),
+                  );
+                }
+                return await origMethod.call(acTarget, args);
+              } catch (err) {
+                console.error("[Prisma Proxy] Error in account.create:", err);
+                throw err;
+              }
+            };
+          }
+          return origMethod;
+        },
+      });
+    }
+    return orig;
+  },
+});
+
 const resendApiKey = process.env.RESEND_API_KEY;
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
@@ -31,7 +87,7 @@ const baseURL =
   ) || "http://localhost:3000";
 
 export const auth = betterAuth({
-  database: prismaAdapter(prisma, {
+  database: prismaAdapter(prismaProxy as any, {
     provider: "postgresql",
   }),
   baseURL,
