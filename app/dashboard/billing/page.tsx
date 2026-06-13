@@ -16,9 +16,22 @@ export default async function BillingPage() {
   const user = session.user as any;
   const familyId = user.familyId;
 
-  const subscription = await prisma.subscription.findUnique({
-    where: { familyId },
-  });
+  let subscription: any = null;
+  if (familyId) {
+    try {
+      subscription = await prisma.subscription.findUnique({
+        where: { familyId },
+      });
+    } catch (err) {
+      // Log and swallow to avoid crashing the page in production
+      console.error("[Billing] prisma.subscription.findUnique failed:", err);
+      subscription = null;
+    }
+  } else {
+    console.warn(
+      "[Billing] user has no familyId; skipping subscription lookup",
+    );
+  }
 
   return (
     <div className="space-y-6">
