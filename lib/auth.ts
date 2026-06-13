@@ -171,13 +171,17 @@ export const auth = betterAuth({
     enabled: true,
     // sendVerificationEmail will be called with { user, url, token }
     sendVerificationEmail: async ({ user, url, token }: any) => {
+      // Ensure Resend client exists and env vars are present
       if (!resend) {
-        console.warn("RESEND_API_KEY not set; skipping verification email");
+        console.error("[Auth] RESEND_API_KEY not set or invalid; skipping verification email");
+        console.error("[Auth] RESEND_API_KEY present:", !!process.env.RESEND_API_KEY);
         return;
       }
 
-      const from =
-        process.env.EMAIL_FROM || `no-reply@${new URL(baseURL).hostname}`;
+      const from = process.env.EMAIL_FROM || `no-reply@${new URL(baseURL).hostname}`;
+      if (!process.env.EMAIL_FROM) {
+        console.warn("[Auth] EMAIL_FROM not set; using fallback:", from);
+      }
 
       const html = `
                 <p>Bonjour ${user.name ?? "membre"},</p>
@@ -188,15 +192,32 @@ export const auth = betterAuth({
                 <p>Merci,<br/>L'équipe Gestic</p>
             `;
 
+      // Log intent before sending to help debug in Vercel logs
       try {
-        await resend.emails.send({
+        console.info("[Auth] Sending verification email via Resend", {
+          to: user?.email,
+          from,
+          baseURL,
+          resendApiKeyPresent: !!process.env.RESEND_API_KEY,
+        });
+
+        const result = await resend.emails.send({
           from,
           to: user.email,
           subject: "Vérifiez votre adresse e-mail pour Gestic",
           html,
         });
-      } catch (err) {
-        console.error("Failed to send verification email via Resend:", err);
+
+        console.info("[Auth] Resend send result:", result);
+      } catch (err: any) {
+        // Capture non-enumerable properties and stack for richer logs
+        try {
+          const serialized = JSON.stringify(err, Object.getOwnPropertyNames(err));
+          console.error("[Auth] Erreur Resend (serialized):", serialized);
+        } catch (serErr) {
+          console.error("[Auth] Erreur Resend (toString):", String(err));
+        }
+        console.error("[Auth] Erreur Resend stack:", err?.stack || err);
       }
     },
     // Optionally, after a successful verification you can auto sign-in or run hooks
