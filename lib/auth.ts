@@ -171,14 +171,33 @@ export const auth = betterAuth({
     enabled: true,
     // sendVerificationEmail will be called with { user, url, token }
     sendVerificationEmail: async ({ user, url, token }: any) => {
-      // Ensure Resend client exists and env vars are present
-      if (!resend) {
-        console.error("[Auth] RESEND_API_KEY not set or invalid; skipping verification email");
-        console.error("[Auth] RESEND_API_KEY present:", !!process.env.RESEND_API_KEY);
-        return;
+      // Immediate trace for send flow start
+      try {
+        console.info(
+          "[Auth] -> Tentative d'envoi d'e-mail initiée pour:",
+          user?.email,
+          { url, token },
+        );
+      } catch (e) {
+        console.info(
+          "[Auth] -> Tentative d'envoi d'e-mail initiée (could not log user/email)",
+        );
       }
 
-      const from = process.env.EMAIL_FROM || `no-reply@${new URL(baseURL).hostname}`;
+      // Ensure Resend client exists and env vars are present; throw to surface errors in logs
+      if (!resend) {
+        console.error(
+          "[Auth] RESEND_API_KEY not set or invalid; throwing to surface error in logs",
+        );
+        console.error(
+          "[Auth] RESEND_API_KEY present:",
+          !!process.env.RESEND_API_KEY,
+        );
+        throw new Error("RESEND_API_KEY missing in environment");
+      }
+
+      const from =
+        process.env.EMAIL_FROM || `no-reply@${new URL(baseURL).hostname}`;
       if (!process.env.EMAIL_FROM) {
         console.warn("[Auth] EMAIL_FROM not set; using fallback:", from);
       }
@@ -201,6 +220,7 @@ export const auth = betterAuth({
           resendApiKeyPresent: !!process.env.RESEND_API_KEY,
         });
 
+        // Await ensures the outbound HTTP call completes before the function returns
         const result = await resend.emails.send({
           from,
           to: user.email,
@@ -212,12 +232,17 @@ export const auth = betterAuth({
       } catch (err: any) {
         // Capture non-enumerable properties and stack for richer logs
         try {
-          const serialized = JSON.stringify(err, Object.getOwnPropertyNames(err));
+          const serialized = JSON.stringify(
+            err,
+            Object.getOwnPropertyNames(err),
+          );
           console.error("[Auth] Erreur Resend (serialized):", serialized);
         } catch (serErr) {
           console.error("[Auth] Erreur Resend (toString):", String(err));
         }
         console.error("[Auth] Erreur Resend stack:", err?.stack || err);
+        // rethrow so Better Auth surfaces the error in logs/response
+        throw err;
       }
     },
     // Optionally, after a successful verification you can auto sign-in or run hooks
