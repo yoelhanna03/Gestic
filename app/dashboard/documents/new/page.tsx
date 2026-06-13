@@ -128,12 +128,12 @@ export default function NewDocumentPage() {
 
           {/* URL Fichier (Simulé) */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">
+            <label className="text-sm font-medium bg-black color-white p-2 rounded-lg">
               Fichier (image ou PDF)
             </label>
             <input
               type="file"
-              accept="image/*,.pdf"
+              accept="image/*,.pdf, .png, .jpg, .jpeg, .webp"
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
               className="w-full"
             />

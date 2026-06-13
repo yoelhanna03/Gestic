@@ -105,10 +105,17 @@ export default function AlertsPage() {
                     <div>
                       <div className="font-semibold text-lg">{doc?.name}</div>
                       <div className="text-xs text-muted-foreground">
-                        {doc?.type} — Expiration: {doc?.expirationDate ? new Date(doc.expirationDate).toLocaleDateString("fr-FR") : "N/A"}
+                        {doc?.type} — Expiration:{" "}
+                        {doc?.expirationDate
+                          ? new Date(doc.expirationDate).toLocaleDateString(
+                              "fr-FR",
+                            )
+                          : "N/A"}
                       </div>
                     </div>
-                    <div className={`text-sm font-bold text-${sev.color}-700`}>{sev.label}</div>
+                    <div className={`text-sm font-bold text-${sev.color}-700`}>
+                      {sev.label}
+                    </div>
                   </div>
 
                   <div className="mt-3 flex gap-2">

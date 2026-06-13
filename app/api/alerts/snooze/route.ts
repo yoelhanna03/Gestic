@@ -14,22 +14,34 @@ export async function POST(req: NextRequest) {
     const { id, days } = body;
     if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
-    const alert = await prisma.alert.findUnique({ where: { id }, include: { document: true } });
-    if (!alert) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const alert = await prisma.alert.findUnique({
+      where: { id },
+      include: { document: true },
+    });
+    if (!alert)
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     const user = session.user as any;
     const familyId = user.familyId;
     const doc = alert.document;
-    const allowed = (familyId && doc.familyId === familyId) || doc.userId === user.id;
-    if (!allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const allowed =
+      (familyId && doc.familyId === familyId) || doc.userId === user.id;
+    if (!allowed)
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-    const daysNum = typeof days === 'number' ? days : parseInt(days || '7', 10);
+    const daysNum = typeof days === "number" ? days : parseInt(days || "7", 10);
     const newTrigger = new Date(Date.now() + daysNum * 24 * 60 * 60 * 1000);
 
-    await prisma.alert.update({ where: { id }, data: { triggerDate: newTrigger, isSent: false } });
+    await prisma.alert.update({
+      where: { id },
+      data: { triggerDate: newTrigger, isSent: false },
+    });
 
     return NextResponse.json({ ok: true });
   } catch (err) {
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 },
+    );
   }
 }
