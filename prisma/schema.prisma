@@ -57,6 +57,8 @@ model Account {
   id                    String    @id
   userId                String
   providerId            String
+  // Optional password for email/password accounts
+  password              String?
   providerUserId        String?
   accessToken           String?
   refreshToken          String?
