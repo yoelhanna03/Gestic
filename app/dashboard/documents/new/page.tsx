@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { documentSchema, DocumentInput } from "@/lib/validations/document";
+import { put as vercelClientPut } from "@vercel/blob/client";
 import { FaSave } from "react-icons/fa";
 
 export default function NewDocumentPage() {
@@ -42,16 +43,13 @@ export default function NewDocumentPage() {
           const err = await presignRes.json().catch(() => ({}));
           throw new Error(err?.error || "Presign failed");
         }
-        const { url, publicUrl } = await presignRes.json();
+        const { clientToken, key, publicUrl } = await presignRes.json();
 
-        // Upload file directly to S3 using the presigned URL
-        const putRes = await fetch(url, {
-          method: "PUT",
-          headers: { "Content-Type": file.type || "application/octet-stream" },
-          body: file,
+        // Upload file directly using Vercel Blob client SDK and the generated client token
+        await vercelClientPut(key, file as any, {
+          token: clientToken,
+          contentType: file.type || "application/octet-stream",
         });
-        if (!putRes.ok) throw new Error("Upload to storage failed");
-
         fileUrl = publicUrl;
       }
 
