@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
       // If the user doesn't have a family yet, return documents they personally created
       const userDocs = await prisma.document.findMany({
         where: { userId: user.id },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
       });
 
       return NextResponse.json(userDocs);
@@ -28,12 +28,15 @@ export async function GET(req: NextRequest) {
 
     const documents = await prisma.document.findMany({
       where: { familyId: user.familyId },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
 
     return NextResponse.json(documents);
   } catch (error) {
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 },
+    );
   }
 }
 
@@ -75,15 +78,18 @@ export async function POST(req: NextRequest) {
       where: { familyId },
     });
 
-    if (subscription?.plan === 'FREE') {
+    if (subscription?.plan === "FREE") {
       const docCount = await prisma.document.count({
         where: { familyId },
       });
 
       if (docCount >= 3) {
         return NextResponse.json(
-          { error: "Limite atteinte pour le plan Gratuit (3 documents max). Passez au Premium pour en ajouter davantage." },
-          { status: 403 }
+          {
+            error:
+              "Limite atteinte pour le plan Gratuit (3 documents max). Passez au Premium pour en ajouter davantage.",
+          },
+          { status: 403 },
         );
       }
     }
@@ -93,7 +99,9 @@ export async function POST(req: NextRequest) {
     const document = await prisma.document.create({
       data: {
         ...validatedData,
-        expirationDate: validatedData.expirationDate ? new Date(validatedData.expirationDate) : null,
+        expirationDate: validatedData.expirationDate
+          ? new Date(validatedData.expirationDate)
+          : null,
         userId: user.id,
         familyId: familyId,
       },
@@ -104,6 +112,9 @@ export async function POST(req: NextRequest) {
     if (error instanceof Error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 },
+    );
   }
 }

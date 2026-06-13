@@ -1,10 +1,10 @@
 "use client";
 
-import React from 'react';
-import { FaUserCircle, FaSignOutAlt } from 'react-icons/fa';
+import React from "react";
+import { FaUserCircle, FaSignOutAlt } from "react-icons/fa";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export function Header({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(false);
@@ -14,16 +14,19 @@ export function Header({ children }: { children: React.ReactNode }) {
     if (loading) return;
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/sign-out', { method: 'POST', credentials: 'same-origin' });
+      const res = await fetch("/api/auth/sign-out", {
+        method: "POST",
+        credentials: "same-origin",
+      });
       if (!res.ok) {
-        console.error('Sign out failed', await res.text());
+        console.error("Sign out failed", await res.text());
       }
     } catch (err) {
-      console.error('Sign out error', err);
+      console.error("Sign out error", err);
     } finally {
       // Always redirect to landing page after attempting to sign out
       setLoading(false);
-      router.push('/');
+      router.push("/");
     }
   }
 
