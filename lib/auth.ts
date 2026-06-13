@@ -222,15 +222,31 @@ export const auth = betterAuth({
           resendApiKeyPresent: !!process.env.RESEND_API_KEY,
         });
 
-        // Await ensures the outbound HTTP call completes before the function returns
-        const result = await resend.emails.send({
-          from,
-          to: user.email,
-          subject: "Vérifiez votre adresse e-mail pour Gestic",
-          html,
-        });
+        // Log payload explicitly for debugging sender/recipient validity
+        try {
+          console.info("[Auth] Payload envoyé à Resend:", {
+            from: process.env.EMAIL_FROM || from,
+            to: user?.email,
+          });
+        } catch (logErr) {
+          console.warn("[Auth] Failed to log Resend payload:", logErr);
+        }
 
-        console.info("[Auth] Resend send result:", result);
+        // Await ensures the outbound HTTP call completes before the function returns
+        try {
+          const result = await resend.emails.send({
+            from,
+            to: user.email,
+            subject: "Vérifiez votre adresse e-mail pour Gestic",
+            html,
+          });
+
+          console.info("[Auth] Resend send result:", result);
+        } catch (exception) {
+          // Ultra-large capture: log the raw exception object to ensure nothing is swallowed
+          console.error("[Auth] Exception brute Resend:", exception);
+          throw exception;
+        }
       } catch (err: any) {
         // Capture non-enumerable properties and stack for richer logs
         try {
