@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { put as vercelPut } from "@vercel/blob";
+import { generateClientTokenFromReadWriteToken } from "@vercel/blob";
 
 const SERVER_TOKEN =
   process.env.BLOB_READ_WRITE_TOKEN || process.env.VERCEL_BLOB_TOKEN;
@@ -26,23 +26,17 @@ export async function POST(req: NextRequest) {
 
     const key = `documents/${Date.now()}-${filename.replace(/[^a-zA-Z0-9_.-]/g, "_")}`;
 
-    // Use @vercel/blob server API to request an upload handle/url
-    // pass `access: 'public'` in options and the server token in the third arg
-    const res = await vercelPut(
-      key,
-      { access: "public", contentType },
-      { token: SERVER_TOKEN },
-    );
+    // Generate a short-lived client token the browser can use to upload directly
+    const clientToken = await generateClientTokenFromReadWriteToken({
+      token: SERVER_TOKEN,
+      pathname: key,
+      access: "public",
+      contentType,
+    } as any);
 
-    // The SDK returns an object with url/downloadUrl/pathname; it may also include an uploadUrl for PUT
-    const uploadUrl =
-      (res as any).uploadUrl || (res as any).uploadURL || (res as any).url;
-    const publicUrl =
-      (res as any).url ||
-      (res as any).downloadUrl ||
-      `https://cdn.vercel.com/${key}`;
+    const publicUrl = `https://cdn.vercel.com/${key}`;
 
-    return NextResponse.json({ url: uploadUrl, publicUrl, key, raw: res });
+    return NextResponse.json({ clientToken, publicUrl, key });
   } catch (err: any) {
     console.error("Presign (vercel blob sdk) error:", err?.message || err);
     return NextResponse.json(
