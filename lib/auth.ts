@@ -61,6 +61,38 @@ const prismaProxy = new Proxy(prisma, {
                     JSON.stringify(data),
                   );
                 }
+
+                // Filter out any unknown fields (like `accountId`) that Prisma model doesn't accept.
+                const allowedKeys = new Set([
+                  "id",
+                  "userId",
+                  "providerId",
+                  "providerUserId",
+                  "accessToken",
+                  "refreshToken",
+                  "idToken",
+                  "accessTokenExpiresAt",
+                  "refreshTokenExpiresAt",
+                  "scope",
+                  "role",
+                ]);
+
+                if (args && args.data && typeof args.data === "object") {
+                  const original = args.data;
+                  const filtered: any = {};
+                  for (const k of Object.keys(original)) {
+                    if (allowedKeys.has(k)) {
+                      filtered[k] = original[k];
+                    } else {
+                      // remove unknown fields and log when we drop them
+                      console.warn(
+                        `[Prisma Proxy] Dropping unknown Account field before create: ${k}`,
+                      );
+                    }
+                  }
+                  args.data = filtered;
+                }
+
                 return await origMethod.call(acTarget, args);
               } catch (err) {
                 console.error("[Prisma Proxy] Error in account.create:", err);
