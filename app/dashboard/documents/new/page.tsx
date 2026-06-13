@@ -29,22 +29,30 @@ export default function NewDocumentPage() {
     try {
       let fileUrl = data.fileUrl;
       if (file) {
-        // read file as dataURL
-        const reader = await new Promise<string>((res, rej) => {
-          const r = new FileReader();
-          r.onload = () => res(String(r.result));
-          r.onerror = rej;
-          r.readAsDataURL(file as File);
-        });
-
-        const uploadRes = await fetch("/api/documents/upload", {
+        // Request a presigned URL from the server
+        const presignRes = await fetch("/api/documents/presign", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ filename: file.name, data: reader }),
+          body: JSON.stringify({
+            filename: file.name,
+            contentType: file.type || "application/octet-stream",
+          }),
         });
-        if (!uploadRes.ok) throw new Error("Upload failed");
-        const uploadJson = await uploadRes.json();
-        fileUrl = uploadJson.url;
+        if (!presignRes.ok) {
+          const err = await presignRes.json().catch(() => ({}));
+          throw new Error(err?.error || "Presign failed");
+        }
+        const { url, publicUrl } = await presignRes.json();
+
+        // Upload file directly to S3 using the presigned URL
+        const putRes = await fetch(url, {
+          method: "PUT",
+          headers: { "Content-Type": file.type || "application/octet-stream" },
+          body: file,
+        });
+        if (!putRes.ok) throw new Error("Upload to storage failed");
+
+        fileUrl = publicUrl;
       }
 
       const payload = { ...data, fileUrl };
