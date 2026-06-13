@@ -43,14 +43,21 @@ export default async function DashboardPage() {
         prisma.subscription.findUnique({ where: { familyId } }),
       ]);
   } else {
-    // Safety: user has no family yet. Keep UI stable with default values.
-    console.warn(
-      "[Dashboard] user has no familyId, skipping subscription/document queries",
-    );
-    documentsCount = 0;
-    alertsCount = 0;
-    membersCount = 1;
-    recentDocs = [];
+    // If user has no family in session yet, fall back to user-scoped queries so newly created documents are visible
+    [documentsCount, alertsCount, membersCount, recentDocs, subscription] =
+      await Promise.all([
+        prisma.document.count({ where: { userId: user.id } }),
+        prisma.alert.count({
+          where: { document: { userId: user.id }, isSent: false },
+        }),
+        prisma.user.count({ where: { id: user.id } }),
+        prisma.document.findMany({
+          where: { userId: user.id },
+          orderBy: { createdAt: "desc" },
+          take: 3,
+        }),
+        null,
+      ]);
     subscription = null;
   }
 

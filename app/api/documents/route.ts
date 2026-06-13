@@ -107,6 +107,20 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // 5. Create an Alert if expiration is within 30 days
+    if (document.expirationDate) {
+      const cutoff = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30);
+      if (new Date(document.expirationDate) <= cutoff) {
+        await prisma.alert.create({
+          data: {
+            documentId: document.id,
+            triggerDate: new Date(),
+            isSent: false,
+          },
+        });
+      }
+    }
+
     return NextResponse.json(document, { status: 201 });
   } catch (error) {
     if (error instanceof Error) {

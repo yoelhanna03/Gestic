@@ -1,35 +1,71 @@
 "use client";
 
-import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { documentSchema, DocumentInput } from '@/lib/validations/document';
-import { FaSave } from 'react-icons/fa';
+import React, { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { documentSchema, DocumentInput } from "@/lib/validations/document";
+import { FaSave } from "react-icons/fa";
 
 export default function NewDocumentPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [message, setMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
 
-  const { register, handleSubmit, formState: { errors }, reset } = useForm<DocumentInput>({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+  } = useForm<DocumentInput>({
     resolver: zodResolver(documentSchema),
   });
+  const [file, setFile] = useState<File | null>(null);
 
   async function onSubmit(data: DocumentInput) {
     setIsSubmitting(true);
     setMessage(null);
     try {
-      const res = await fetch('/api/documents', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+      let fileUrl = data.fileUrl;
+      if (file) {
+        // read file as dataURL
+        const reader = await new Promise<string>((res, rej) => {
+          const r = new FileReader();
+          r.onload = () => res(String(r.result));
+          r.onerror = rej;
+          r.readAsDataURL(file as File);
+        });
+
+        const uploadRes = await fetch("/api/documents/upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ filename: file.name, data: reader }),
+        });
+        if (!uploadRes.ok) throw new Error("Upload failed");
+        const uploadJson = await uploadRes.json();
+        fileUrl = uploadJson.url;
+      }
+
+      const payload = { ...data, fileUrl };
+      const res = await fetch("/api/documents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) throw new Error(await res.text());
 
-      setMessage({ type: 'success', text: 'Document enregistré avec succès !' });
+      setMessage({
+        type: "success",
+        text: "Document enregistré avec succès !",
+      });
       reset();
     } catch (e: any) {
-      setMessage({ type: 'error', text: e.message || 'Une erreur est survenue' });
+      setMessage({
+        type: "error",
+        text: e.message || "Une erreur est survenue",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -39,33 +75,43 @@ export default function NewDocumentPage() {
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex flex-col gap-1">
         <h1 className="text-3xl font-bold">Ajouter un document</h1>
-        <p className="text-muted-foreground">Enregistrez un nouveau contrat ou papier administratif dans votre coffre-fort.</p>
+        <p className="text-muted-foreground">
+          Enregistrez un nouveau contrat ou papier administratif dans votre
+          coffre-fort.
+        </p>
       </div>
 
       {message && (
-        <div className={`p-4 rounded-lg border ${message.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
+        <div
+          className={`p-4 rounded-lg border ${message.type === "success" ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-red-50 border-red-200 text-red-800"}`}
+        >
           {message.text}
         </div>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="p-6 rounded-2xl bg-card border border-border shadow-sm space-y-6">
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        className="p-6 rounded-2xl bg-card border border-border shadow-sm space-y-6"
+      >
         <div className="grid grid-cols-1 gap-6">
           {/* Nom */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Nom du document</label>
             <input
-              {...register('name')}
+              {...register("name")}
               placeholder="Ex: Contrat Assurance Habitation"
-              className={`w-full p-2 rounded-md border ${errors.name ? 'border-red-500' : 'border-border'} bg-background`}
+              className={`w-full p-2 rounded-md border ${errors.name ? "border-red-500" : "border-border"} bg-background`}
             />
-            {errors.name && <p className="text-xs text-red-500">{errors.name.message}</p>}
+            {errors.name && (
+              <p className="text-xs text-red-500">{errors.name.message}</p>
+            )}
           </div>
 
           {/* Catégorie */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Catégorie</label>
             <select
-              {...register('type')}
+              {...register("type")}
               className="w-full p-2 rounded-md border border-border bg-background"
             >
               <option value="CONTRACT">Contrat</option>
@@ -75,41 +121,66 @@ export default function NewDocumentPage() {
               <option value="TAX">Fiscalité</option>
               <option value="OTHER">Autre</option>
             </select>
-            {errors.type && <p className="text-xs text-red-500">{errors.type.message}</p>}
+            {errors.type && (
+              <p className="text-xs text-red-500">{errors.type.message}</p>
+            )}
           </div>
 
           {/* URL Fichier (Simulé) */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Lien vers le document (URL)</label>
+            <label className="text-sm font-medium">
+              Fichier (image ou PDF)
+            </label>
             <input
-              {...register('fileUrl')}
-              placeholder="https://storage.familiSafe.com/doc123.pdf"
-              className={`w-full p-2 rounded-md border ${errors.fileUrl ? 'border-red-500' : 'border-border'} bg-background`}
+              type="file"
+              accept="image/*,.pdf"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              className="w-full"
             />
-            {errors.fileUrl && <p className="text-xs text-red-500">{errors.fileUrl.message}</p>}
+            <p className="text-xs text-muted-foreground">
+              Ou collez un lien dans le champ URL ci-dessous.
+            </p>
+            <input
+              {...register("fileUrl")}
+              placeholder="https://storage.familiSafe.com/doc123.pdf"
+              className={`w-full p-2 rounded-md border ${errors.fileUrl ? "border-red-500" : "border-border"} bg-background`}
+            />
+            {errors.fileUrl && (
+              <p className="text-xs text-red-500">{errors.fileUrl.message}</p>
+            )}
           </div>
 
           {/* Date d'expiration */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Date d'expiration (Optionnel)</label>
+            <label className="text-sm font-medium">
+              Date d'expiration (Optionnel)
+            </label>
             <input
               type="date"
-              {...register('expirationDate')}
+              {...register("expirationDate")}
               className="w-full p-2 rounded-md border border-border bg-background"
             />
-            {errors.expirationDate && <p className="text-xs text-red-500">{errors.expirationDate.message}</p>}
+            {errors.expirationDate && (
+              <p className="text-xs text-red-500">
+                {errors.expirationDate.message}
+              </p>
+            )}
           </div>
 
           {/* Description */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Description</label>
             <textarea
-              {...register('description')}
+              {...register("description")}
               rows={3}
               placeholder="Notes additionnelles sur ce document..."
               className="w-full p-2 rounded-md border border-border bg-background"
             />
-            {errors.description && <p className="text-xs text-red-500">{errors.description.message}</p>}
+            {errors.description && (
+              <p className="text-xs text-red-500">
+                {errors.description.message}
+              </p>
+            )}
           </div>
         </div>
 
@@ -127,7 +198,7 @@ export default function NewDocumentPage() {
             className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 flex items-center gap-2 disabled:opacity-50"
           >
             <FaSave />
-            {isSubmitting ? 'Enregistrement...' : 'Enregistrer le document'}
+            {isSubmitting ? "Enregistrement..." : "Enregistrer le document"}
           </button>
         </div>
       </form>
