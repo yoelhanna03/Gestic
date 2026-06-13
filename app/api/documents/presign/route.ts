@@ -33,27 +33,41 @@ export async function POST(req: NextRequest) {
         Authorization: `Bearer ${VERCEL_BLOB_TOKEN}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ name: key, mimeType: contentType }),
+      body: JSON.stringify({
+        operation: "upload",
+        name: key,
+        mimeType: contentType,
+      }),
     });
 
+    const respText = await apiRes.text().catch(() => "");
+    let json: any = {};
+    try {
+      json = respText ? JSON.parse(respText) : {};
+    } catch (e) {
+      // ignore JSON parse error
+    }
+
     if (!apiRes.ok) {
-      const errText = await apiRes.text().catch(() => "");
-      console.error("Vercel Blob API error:", apiRes.status, errText);
+      console.error("Vercel Blob API error:", apiRes.status, respText);
       return NextResponse.json(
-        { error: "Failed to get upload URL from Vercel Blob" },
+        {
+          error: "Failed to get upload URL from Vercel Blob",
+          details: respText,
+        },
         { status: 502 },
       );
     }
 
-    const json = await apiRes.json();
-    // Expected fields: uploadURL (for PUT) and url (public read URL)
-    const uploadUrl = json?.uploadURL || json?.uploadUrl || json?.url;
+    // Expected fields: uploadURL/uploadUrl/upload_url and public url
+    const uploadUrl =
+      json?.uploadURL || json?.uploadUrl || json?.upload_url || json?.url;
     const publicUrl =
       json?.url ||
       json?.publicUrl ||
       `https://cdn.vercel.com/${json?.key || key}`;
 
-    return NextResponse.json({ url: uploadUrl, publicUrl, key });
+    return NextResponse.json({ url: uploadUrl, publicUrl, key, raw: json });
   } catch (err) {
     console.error("Presign (vercel blob) error:", err);
     return NextResponse.json(
