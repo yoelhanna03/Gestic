@@ -255,16 +255,42 @@ export const auth = betterAuth({
         } catch (exception: any) {
           // Ultra-large capture: log the raw exception object and a JSON dump to avoid silent failures
           try {
-            console.error(
-              "[Auth] CRASH INTERNE RESEND:",
-              exception,
-              JSON.stringify(exception, null, 2),
-            );
-          } catch (jserr) {
-            console.error(
-              "[Auth] CRASH INTERNE RESEND (stringify failed):",
-              exception,
-            );
+            console.error("[Auth] CRASH INTERNE RESEND:", exception);
+            try {
+              console.error(
+                "[Auth] CRASH INTERNE RESEND (serialized):",
+                JSON.stringify(
+                  exception,
+                  Object.getOwnPropertyNames(exception),
+                  2,
+                ),
+              );
+            } catch (jserr) {
+              console.error(
+                "[Auth] CRASH INTERNE RESEND (stringify failed):",
+                jserr,
+              );
+            }
+
+            // If the HTTP client attached request/response details, log them for debugging
+            if (exception.request) {
+              try {
+                console.error(
+                  "[Auth] Resend exception.request:",
+                  exception.request,
+                );
+              } catch {}
+            }
+            if (exception.response) {
+              try {
+                console.error(
+                  "[Auth] Resend exception.response:",
+                  exception.response,
+                );
+              } catch {}
+            }
+          } catch (outerErr) {
+            console.error("[Auth] Failed logging Resend exception:", outerErr);
           }
           throw exception;
         }
