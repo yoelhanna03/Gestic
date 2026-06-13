@@ -1,24 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-const REGION = process.env.AWS_REGION;
-const BUCKET = process.env.S3_BUCKET;
-
-const s3Client = new S3Client({
-  region: REGION,
-  credentials: process.env.AWS_ACCESS_KEY_ID
-    ? {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
-      }
-    : undefined,
-});
+const VERCEL_BLOB_TOKEN = process.env.VERCEL_BLOB_TOKEN;
+const VERCEL_PROJECT =
+  process.env.VERCEL_PROJECT_ID || process.env.VERCEL_PROJECT;
 
 export async function POST(req: NextRequest) {
   try {
-    if (!REGION || !BUCKET || !process.env.AWS_ACCESS_KEY_ID) {
-      return NextResponse.json({ error: "S3 not configured" }, { status: 500 });
+    if (!VERCEL_BLOB_TOKEN) {
+      return NextResponse.json(
+        { error: "Vercel Blob not configured" },
+        { status: 500 },
+      );
     }
 
     const body = await req.json();
@@ -34,22 +26,36 @@ export async function POST(req: NextRequest) {
 
     const key = `documents/${Date.now()}-${filename.replace(/[^a-zA-Z0-9_.-]/g, "_")}`;
 
-    const cmd = new PutObjectCommand({
-      Bucket: BUCKET,
-      Key: key,
-      ContentType: contentType,
-      ACL: "public-read",
+    // Call Vercel Blob REST API to create an upload URL
+    const apiRes = await fetch("https://api.vercel.com/v1/blob", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${VERCEL_BLOB_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ name: key, mimeType: contentType }),
     });
 
-    const url = await getSignedUrl(s3Client, cmd, { expiresIn: 3600 });
+    if (!apiRes.ok) {
+      const errText = await apiRes.text().catch(() => "");
+      console.error("Vercel Blob API error:", apiRes.status, errText);
+      return NextResponse.json(
+        { error: "Failed to get upload URL from Vercel Blob" },
+        { status: 502 },
+      );
+    }
 
+    const json = await apiRes.json();
+    // Expected fields: uploadURL (for PUT) and url (public read URL)
+    const uploadUrl = json?.uploadURL || json?.uploadUrl || json?.url;
     const publicUrl =
-      process.env.S3_PUBLIC_URL ||
-      `https://${BUCKET}.s3.${REGION}.amazonaws.com/${encodeURIComponent(key)}`;
+      json?.url ||
+      json?.publicUrl ||
+      `https://cdn.vercel.com/${json?.key || key}`;
 
-    return NextResponse.json({ url, publicUrl, key });
+    return NextResponse.json({ url: uploadUrl, publicUrl, key });
   } catch (err) {
-    console.error("Presign error:", err);
+    console.error("Presign (vercel blob) error:", err);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 },
