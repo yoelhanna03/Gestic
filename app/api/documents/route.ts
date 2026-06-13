@@ -17,7 +17,13 @@ export async function GET(req: NextRequest) {
 
     const user = session.user as any;
     if (!user.familyId) {
-      return NextResponse.json({ documents: [] }, { status: 200 });
+      // If the user doesn't have a family yet, return documents they personally created
+      const userDocs = await prisma.document.findMany({
+        where: { userId: user.id },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      return NextResponse.json(userDocs);
     }
 
     const documents = await prisma.document.findMany({
