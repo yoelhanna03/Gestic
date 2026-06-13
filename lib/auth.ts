@@ -169,6 +169,8 @@ export const auth = betterAuth({
   emailVerification: {
     // enable email verification flows inside Better Auth
     enabled: true,
+    // ensure verification is triggered on sign-up where supported
+    sendOnSignUp: true,
     // sendVerificationEmail will be called with { user, url, token }
     sendVerificationEmail: async ({ user, url, token }: any) => {
       // Immediate trace for send flow start
@@ -249,3 +251,12 @@ export const auth = betterAuth({
     autoSignInAfterVerification: false,
   },
 });
+
+// Log auth-related runtime config for debugging in server logs
+try {
+  console.info("[Auth init] baseURL:", baseURL);
+  console.info("[Auth init] emailVerification.enabled:", true);
+  console.info("[Auth init] resendApiKeyPresent:", !!process.env.RESEND_API_KEY);
+} catch (e) {
+  // ignore
+}
