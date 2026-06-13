@@ -234,6 +234,16 @@ export const auth = betterAuth({
 
         // Await ensures the outbound HTTP call completes before the function returns
         try {
+          // Inspect environment variables and keys before sending
+          try {
+            console.log("[Auth] Check variables:", {
+              from: process.env.EMAIL_FROM,
+              hasKey: !!process.env.RESEND_API_KEY,
+            });
+          } catch (lv) {
+            console.warn("[Auth] Failed to log env vars:", lv);
+          }
+
           const result = await resend.emails.send({
             from,
             to: user.email,
@@ -242,9 +252,20 @@ export const auth = betterAuth({
           });
 
           console.info("[Auth] Resend send result:", result);
-        } catch (exception) {
-          // Ultra-large capture: log the raw exception object to ensure nothing is swallowed
-          console.error("[Auth] Exception brute Resend:", exception);
+        } catch (exception: any) {
+          // Ultra-large capture: log the raw exception object and a JSON dump to avoid silent failures
+          try {
+            console.error(
+              "[Auth] CRASH INTERNE RESEND:",
+              exception,
+              JSON.stringify(exception, null, 2),
+            );
+          } catch (jserr) {
+            console.error(
+              "[Auth] CRASH INTERNE RESEND (stringify failed):",
+              exception,
+            );
+          }
           throw exception;
         }
       } catch (err: any) {
