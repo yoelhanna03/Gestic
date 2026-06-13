@@ -16,25 +16,43 @@ export default async function DashboardPage() {
   const user = session.user as any;
   const familyId = user.familyId;
 
-  const [documentsCount, alertsCount, membersCount, recentDocs, subscription] =
-    await Promise.all([
-      prisma.document.count({ where: { familyId } }),
-      prisma.document.count({
-        where: {
-          familyId,
-          expirationDate: {
-            lte: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
+  let documentsCount = 0;
+  let alertsCount = 0;
+  let membersCount = 0;
+  let recentDocs: any[] = [];
+  let subscription: any = null;
+
+  if (familyId) {
+    [documentsCount, alertsCount, membersCount, recentDocs, subscription] =
+      await Promise.all([
+        prisma.document.count({ where: { familyId } }),
+        prisma.document.count({
+          where: {
+            familyId,
+            expirationDate: {
+              lte: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
+            },
           },
-        },
-      }),
-      prisma.user.count({ where: { familyId } }),
-      prisma.document.findMany({
-        where: { familyId },
-        orderBy: { createdAt: "desc" },
-        take: 3,
-      }),
-      prisma.subscription.findUnique({ where: { familyId } }),
-    ]);
+        }),
+        prisma.user.count({ where: { familyId } }),
+        prisma.document.findMany({
+          where: { familyId },
+          orderBy: { createdAt: "desc" },
+          take: 3,
+        }),
+        prisma.subscription.findUnique({ where: { familyId } }),
+      ]);
+  } else {
+    // Safety: user has no family yet. Keep UI stable with default values.
+    console.warn(
+      "[Dashboard] user has no familyId, skipping subscription/document queries",
+    );
+    documentsCount = 0;
+    alertsCount = 0;
+    membersCount = 1;
+    recentDocs = [];
+    subscription = null;
+  }
 
   const stats = [
     {
