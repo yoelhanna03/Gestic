@@ -34,6 +34,15 @@ export default function SignupPage() {
         );
       } else {
         setSent(true);
+        try {
+          await fetch(`/api/auth/send-verification-email`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, callbackURL: "/dashboard" }),
+          });
+        } catch (e) {
+          console.error("Failed to call send-verification-email:", e);
+        }
       }
     } catch (err) {
       setError("Une erreur inattendue est survenue");

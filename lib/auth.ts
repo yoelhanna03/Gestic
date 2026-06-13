@@ -256,7 +256,76 @@ export const auth = betterAuth({
 try {
   console.info("[Auth init] baseURL:", baseURL);
   console.info("[Auth init] emailVerification.enabled:", true);
-  console.info("[Auth init] resendApiKeyPresent:", !!process.env.RESEND_API_KEY);
+  console.info(
+    "[Auth init] resendApiKeyPresent:",
+    !!process.env.RESEND_API_KEY,
+  );
 } catch (e) {
   // ignore
+}
+
+// Dump `auth` object keys to help debug plugin registration
+try {
+  console.info("[Auth init] auth keys:", Object.keys(auth));
+  console.info(
+    "[Auth init] auth.emailVerification:",
+    typeof (auth as any).emailVerification,
+  );
+  console.info(
+    "[Auth init] auth.emailAndPassword:",
+    typeof (auth as any).emailAndPassword,
+  );
+} catch (e) {
+  console.warn("[Auth init] Could not inspect auth object:", e);
+}
+try {
+  const opts = (auth as any).options;
+  if (opts && typeof opts === "object") {
+    console.info("[Auth init] auth.options keys:", Object.keys(opts));
+    console.info(
+      "[Auth init] auth.options.emailVerification:",
+      !!opts.emailVerification,
+    );
+    console.info(
+      "[Auth init] auth.options.emailAndPassword:",
+      !!opts.emailAndPassword,
+    );
+  }
+} catch (e) {
+  console.warn("[Auth init] Could not read auth.options:", e);
+}
+try {
+  const api = (auth as any).api;
+  if (api && typeof api === "object") {
+    console.info("[Auth init] auth.api keys:", Object.keys(api));
+    // try to show nested keys if present
+    for (const k of Object.keys(api)) {
+      try {
+        console.info(
+          `[Auth init] auth.api.${k} keys:`,
+          Object.keys(api[k] || {}),
+        );
+        if (k === "sendVerificationEmail") {
+          try {
+            console.info(
+              "[Auth init] auth.api.sendVerificationEmail.path:",
+              api[k]?.path,
+            );
+          } catch (e) {}
+        }
+        if (k === "signUpEmail") {
+          try {
+            console.info(
+              "[Auth init] auth.api.signUpEmail.options:",
+              api[k]?.options,
+            );
+          } catch (e) {}
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+  }
+} catch (e) {
+  console.warn("[Auth init] Could not inspect auth.api:", e);
 }
