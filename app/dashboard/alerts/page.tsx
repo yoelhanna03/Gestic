@@ -83,11 +83,12 @@ export default function AlertsPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {alerts.map((doc: any) => {
-            const sev = severity(doc.expirationDate);
+          {alerts.map((alert: any) => {
+            const doc = alert.document;
+            const sev = severity(doc?.expirationDate ?? null);
             return (
               <div
-                key={doc.id}
+                key={alert.id}
                 className={`flex items-start gap-4 p-4 rounded-lg border ${sev.color === "red" ? "border-red-200 bg-red-50" : sev.color === "orange" ? "border-amber-200 bg-amber-50" : "border-sky-100 bg-sky-50"}`}
               >
                 <div className="mt-1 text-2xl text-muted-foreground">
@@ -102,30 +103,23 @@ export default function AlertsPage() {
                 <div className="flex-1">
                   <div className="flex justify-between items-start">
                     <div>
-                      <div className="font-semibold text-lg">{doc.name}</div>
+                      <div className="font-semibold text-lg">{doc?.name}</div>
                       <div className="text-xs text-muted-foreground">
-                        {doc.type} — Expiration:{" "}
-                        {doc.expirationDate
-                          ? new Date(doc.expirationDate).toLocaleDateString(
-                              "fr-FR",
-                            )
-                          : "N/A"}
+                        {doc?.type} — Expiration: {doc?.expirationDate ? new Date(doc.expirationDate).toLocaleDateString("fr-FR") : "N/A"}
                       </div>
                     </div>
-                    <div className={`text-sm font-bold text-${sev.color}-700`}>
-                      {sev.label}
-                    </div>
+                    <div className={`text-sm font-bold text-${sev.color}-700`}>{sev.label}</div>
                   </div>
 
                   <div className="mt-3 flex gap-2">
                     <button
-                      onClick={() => markRead.mutate(doc.id)}
+                      onClick={() => markRead.mutate(alert.id)}
                       className="px-3 py-1 rounded bg-primary text-primary-foreground text-sm"
                     >
                       Marquer comme lu
                     </button>
                     <button
-                      onClick={() => snooze.mutate({ id: doc.id, days: 7 })}
+                      onClick={() => snooze.mutate({ id: alert.id, days: 7 })}
                       className="px-3 py-1 rounded border border-border text-sm"
                     >
                       Reporter 7j

@@ -13,15 +13,15 @@ export async function GET(req: NextRequest) {
     const user = session.user as any;
     const familyId = user.familyId;
 
-    const cutoff = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30); // 30 days
+    // Return pending alerts (Alert records) for the user's family or personal alerts
+    const where: any = { isSent: false };
+    if (familyId) where.document = { familyId };
+    else where.document = { userId: user.id };
 
-    const where = familyId
-      ? { familyId, expirationDate: { lte: cutoff } }
-      : { userId: user.id, expirationDate: { lte: cutoff } };
-
-    const alerts = await prisma.document.findMany({
+    const alerts = await prisma.alert.findMany({
       where,
-      orderBy: { expirationDate: "asc" },
+      include: { document: true },
+      orderBy: { triggerDate: "asc" },
     });
 
     return NextResponse.json(alerts);
