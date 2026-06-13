@@ -47,6 +47,7 @@ export default function NewDocumentPage() {
 
         // Upload file directly using Vercel Blob client SDK and the generated client token
         await vercelClientPut(key, file as any, {
+          access: "public",
           token: clientToken,
           contentType: file.type || "application/octet-stream",
         });
