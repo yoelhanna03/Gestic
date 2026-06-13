@@ -1,9 +1,27 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "@better-auth/prisma-adapter";
 import { PrismaClient } from "@prisma/client";
+import fs from "fs";
+import path from "path";
 import { Resend } from "resend";
 
 const prisma = new PrismaClient();
+
+// Detect whether the Prisma schema includes a `password` field on Account.
+const schemaPath = path.join(process.cwd(), "prisma", "schema.prisma");
+let accountHasPassword = false;
+try {
+  if (fs.existsSync(schemaPath)) {
+    const schemaText = fs.readFileSync(schemaPath, "utf8");
+    // crude check for a `password` field inside the Account model
+    accountHasPassword = /model\s+Account[\s\S]*\bpassword\b/.test(schemaText);
+  }
+} catch (e) {
+  console.warn(
+    "[Prisma Proxy] Could not read prisma schema to detect password field:",
+    e,
+  );
+}
 
 // Proxy the Prisma client to intercept `account.create` calls.
 // This helps debug and auto-map common field names (e.g. providerAccountId -> providerUserId)
@@ -75,7 +93,14 @@ const prismaProxy = new Proxy(prisma, {
                   "refreshTokenExpiresAt",
                   "scope",
                   "role",
+                  "createdAt",
+                  "updatedAt",
                 ]);
+
+                // Preserve `password` if the Prisma schema actually defines it.
+                if (accountHasPassword) {
+                  allowedKeys.add("password");
+                }
 
                 if (args && args.data && typeof args.data === "object") {
                   const original = args.data;
