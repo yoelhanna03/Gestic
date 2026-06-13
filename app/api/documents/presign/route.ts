@@ -27,17 +27,17 @@ export async function POST(req: NextRequest) {
     const key = `documents/${Date.now()}-${filename.replace(/[^a-zA-Z0-9_.-]/g, "_")}`;
 
     // Call Vercel Blob REST API to create an upload URL
-    const apiRes = await fetch("https://api.vercel.com/v1/blob", {
+    const baseUrl = "https://api.vercel.com/v1/blob";
+    const qs = new URLSearchParams({ operation: "upload" });
+    if (VERCEL_PROJECT) qs.set("projectId", VERCEL_PROJECT);
+
+    const apiRes = await fetch(`${baseUrl}?${qs.toString()}`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${VERCEL_BLOB_TOKEN}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        operation: "upload",
-        name: key,
-        mimeType: contentType,
-      }),
+      body: JSON.stringify({ name: key, mimeType: contentType }),
     });
 
     const respText = await apiRes.text().catch(() => "");
