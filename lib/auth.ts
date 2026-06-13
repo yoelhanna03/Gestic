@@ -18,31 +18,46 @@ const prismaProxy = new Proxy(prisma, {
             return async function (args: any) {
               try {
                 const data = args?.data || {};
-                // If providerUserId is missing but providerAccountId is present, map it.
+                // If providerUserId is missing, try common fallbacks: userId, accountId, providerAccountId
                 if (
                   data &&
-                  !Object.prototype.hasOwnProperty.call(
-                    data,
-                    "providerUserId",
-                  ) &&
-                  Object.prototype.hasOwnProperty.call(
-                    data,
-                    "providerAccountId",
-                  )
+                  !Object.prototype.hasOwnProperty.call(data, "providerUserId")
                 ) {
-                  data.providerUserId = data.providerAccountId;
-                  args.data = data;
-                  console.warn(
-                    "[Prisma Proxy] Mapped providerAccountId -> providerUserId for account.create",
-                  );
+                  if (Object.prototype.hasOwnProperty.call(data, "userId")) {
+                    data.providerUserId = data.userId;
+                    args.data = data;
+                    console.warn(
+                      "[Prisma Proxy] Mapped userId -> providerUserId for account.create",
+                    );
+                  } else if (
+                    Object.prototype.hasOwnProperty.call(data, "accountId")
+                  ) {
+                    data.providerUserId = data.accountId;
+                    args.data = data;
+                    console.warn(
+                      "[Prisma Proxy] Mapped accountId -> providerUserId for account.create",
+                    );
+                  } else if (
+                    Object.prototype.hasOwnProperty.call(
+                      data,
+                      "providerAccountId",
+                    )
+                  ) {
+                    data.providerUserId = data.providerAccountId;
+                    args.data = data;
+                    console.warn(
+                      "[Prisma Proxy] Mapped providerAccountId -> providerUserId for account.create",
+                    );
+                  }
                 }
+
                 // Log payload for debugging if providerUserId is still missing
                 if (
                   data &&
                   !Object.prototype.hasOwnProperty.call(data, "providerUserId")
                 ) {
                   console.warn(
-                    "[Prisma Proxy] account.create called without providerUserId:",
+                    "[Prisma Proxy] account.create called without providerUserId. payload:",
                     JSON.stringify(data),
                   );
                 }
