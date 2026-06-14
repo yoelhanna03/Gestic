@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { PrismaClient } from "@prisma/client";
+import { getFamilyId } from "@/lib/session-helper";
 import { documentSchema } from "@/lib/validations/document";
 
 const prisma = new PrismaClient();
@@ -15,11 +16,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = session.user as any;
-    if (!user.familyId) {
+    const familyId = await getFamilyId(session.user.id);
+    if (!familyId) {
       // If the user doesn't have a family yet, return documents they personally created
       const userDocs = await prisma.document.findMany({
-        where: { userId: user.id },
+        where: { userId: session.user.id },
         orderBy: { createdAt: "desc" },
       });
 
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest) {
     }
 
     const documents = await prisma.document.findMany({
-      where: { familyId: user.familyId },
+      where: { familyId },
       orderBy: { createdAt: "desc" },
     });
 

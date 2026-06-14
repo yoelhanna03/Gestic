@@ -12,6 +12,7 @@ import { PrismaClient } from "@prisma/client";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { getFamilyId } from "@/lib/session-helper";
 
 const prisma = new PrismaClient();
 
@@ -21,8 +22,7 @@ export default async function DashboardPage() {
   const session = await auth.api.getSession({ headers: headersObj });
   if (!session) redirect("/auth/signin");
 
-  const user = session.user as any;
-  const familyId = user.familyId;
+  const familyId = await getFamilyId(session.user.id);
 
   let documentsCount = 0;
   let alertsCount = 0;
@@ -109,37 +109,37 @@ export default async function DashboardPage() {
       recentAlerts,
       typeBreakdown,
     ] = await Promise.all([
-      prisma.document.count({ where: { userId: user.id } }),
-      prisma.document.count({ where: { userId: user.id, isFavorite: true } }),
+      prisma.document.count({ where: { userId: session.user.id } }),
+      prisma.document.count({ where: { userId: session.user.id, isFavorite: true } }),
       prisma.alert.count({
         where: {
           isRead: false,
-          document: { userId: user.id },
+          document: { userId: session.user.id },
           OR: [{ snoozedUntil: null }, { snoozedUntil: { lte: now } }],
         },
       }),
       prisma.document.count({
         where: {
-          userId: user.id,
+          userId: session.user.id,
           expirationDate: { gte: now, lte: next7Days },
         },
       }),
       prisma.document.count({
         where: {
-          userId: user.id,
+          userId: session.user.id,
           expirationDate: { gte: now, lte: next30Days },
         },
       }),
-      prisma.user.count({ where: { id: user.id } }),
+      prisma.user.count({ where: { id: session.user.id } }),
       prisma.document.findMany({
-        where: { userId: user.id },
+        where: { userId: session.user.id },
         orderBy: { createdAt: "desc" },
         take: 3,
       }),
       prisma.alert.findMany({
         where: {
           isRead: false,
-          document: { userId: user.id },
+          document: { userId: session.user.id },
           OR: [{ snoozedUntil: null }, { snoozedUntil: { lte: now } }],
         },
         include: { document: true },
@@ -149,7 +149,7 @@ export default async function DashboardPage() {
       prisma.document.groupBy({
         by: ["type"],
         _count: { type: true },
-        where: { userId: user.id },
+        where: { userId: session.user.id },
       }),
     ]);
     subscription = null;
@@ -206,7 +206,7 @@ export default async function DashboardPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">
-          Bienvenue, {user.name ?? "membre"} 👋
+          Bienvenue, {session.user.name ?? "membre"} 👋
         </h1>
         <p className="text-muted-foreground">
           Voici un aperçu de votre coffre-fort familial.

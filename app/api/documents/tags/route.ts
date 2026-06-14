@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { PrismaClient } from "@prisma/client";
+import { getFamilyId } from "@/lib/session-helper";
 
 const prisma = new PrismaClient();
 
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const user = session.user as any;
+    const familyId = await getFamilyId(session.user.id);
     const document = await prisma.document.findUnique({
       where: { id: documentId },
     });
@@ -37,8 +38,8 @@ export async function POST(req: NextRequest) {
 
     // Verify ownership
     const allowed =
-      (user.familyId && document.familyId === user.familyId) ||
-      document.userId === user.id;
+      (familyId && document.familyId === familyId) ||
+      document.userId === session.user.id;
     if (!allowed) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }

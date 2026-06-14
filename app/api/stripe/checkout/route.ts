@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { stripe } from "@/lib/stripe";
 import { PrismaClient } from "@prisma/client";
+import { getFamilyId } from "@/lib/session-helper";
 
 const prisma = new PrismaClient();
 
@@ -15,11 +16,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = session.user as any;
+    // Better Auth doesn't include custom fields (familyId) in session by default
+    // Get user details and familyId from database
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { id: true, name: true, email: true },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
 
     // Ensure the user belongs to a family before checkout.
     // If the user has no family yet, create one automatically.
-    let familyId = user.familyId;
+    let familyId = await getFamilyId(session.user.id);
     if (!familyId) {
       const family = await prisma.family.create({
         data: {

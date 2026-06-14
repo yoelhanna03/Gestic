@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { PrismaClient } from "@prisma/client";
+import { getFamilyId } from "@/lib/session-helper";
 import PortalButton from "./PortalButton";
 
 const prisma = new PrismaClient();
@@ -13,8 +14,9 @@ export default async function BillingPage() {
   const session = await auth.api.getSession({ headers: headersObj });
   if (!session) redirect("/auth/signin");
 
-  const user = session.user as any;
-  const familyId = user.familyId;
+  // Better Auth doesn't include custom fields (familyId) in session by default
+  // So we need to fetch the familyId from the database
+  const familyId = await getFamilyId(session.user.id);
 
   let subscription: any = null;
   if (familyId) {

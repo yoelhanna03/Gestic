@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { stripe } from "@/lib/stripe";
 import { PrismaClient } from "@prisma/client";
+import { getFamilyId } from "@/lib/session-helper";
 
 const prisma = new PrismaClient();
 
@@ -15,27 +16,36 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = session.user as any;
-    if (!user.familyId) {
-      return NextResponse.json({ error: "No family associated" }, { status: 400 });
+    const familyId = await getFamilyId(session.user.id);
+    if (!familyId) {
+      return NextResponse.json(
+        { error: "No family associated" },
+        { status: 400 },
+      );
     }
 
     const subscription = await prisma.subscription.findUnique({
-      where: { familyId: user.familyId },
+      where: { familyId },
     });
 
     if (!subscription?.stripeCustomerId) {
-      return NextResponse.json({ error: "No Stripe customer found" }, { status: 400 });
+      return NextResponse.json(
+        { error: "No Stripe customer found" },
+        { status: 400 },
+      );
     }
 
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: subscription.stripeCustomerId,
-      return_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/billing`,
+      return_url: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard/billing`,
     });
 
     return NextResponse.json({ url: portalSession.url });
   } catch (error) {
     console.error("Stripe Portal Error:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 },
+    );
   }
 }

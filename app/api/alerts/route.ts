@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { PrismaClient } from "@prisma/client";
+import { getFamilyId } from "@/lib/session-helper";
 
 const prisma = new PrismaClient();
 
@@ -10,8 +11,7 @@ export async function GET(req: NextRequest) {
     if (!session)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const user = session.user as any;
-    const familyId = user.familyId;
+    const familyId = await getFamilyId(session.user.id);
     const { searchParams } = new URL(req.url);
     const filter = searchParams.get("filter"); // "all", "critical", "unread"
 
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     if (familyId) {
       where.document = { familyId };
     } else {
-      where.document = { userId: user.id };
+      where.document = { userId: session.user.id };
     }
 
     if (filter === "unread") {

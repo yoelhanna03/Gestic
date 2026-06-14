@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { PrismaClient, Prisma } from "@prisma/client";
+import { getFamilyId } from "@/lib/session-helper";
 
 const prisma = new PrismaClient();
 
@@ -21,11 +22,10 @@ export async function POST(req: NextRequest) {
     if (!alert)
       return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    const user = session.user as any;
-    const familyId = user.familyId;
+    const familyId = await getFamilyId(session.user.id);
     const doc = alert.document;
     const allowed =
-      (familyId && doc.familyId === familyId) || doc.userId === user.id;
+      (familyId && doc.familyId === familyId) || doc.userId === session.user.id;
     if (!allowed)
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
