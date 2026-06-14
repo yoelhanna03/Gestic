@@ -30,7 +30,10 @@ export async function POST(req: NextRequest) {
     if (!allowed)
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-    await prisma.alert.update({ where: { id }, data: { isSent: true } });
+    await prisma.alert.update({
+      where: { id },
+      data: { isRead: true, isSent: true },
+    });
 
     return NextResponse.json({ ok: true });
   } catch (err) {

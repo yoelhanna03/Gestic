@@ -12,11 +12,31 @@ export async function GET(req: NextRequest) {
 
     const user = session.user as any;
     const familyId = user.familyId;
+    const { searchParams } = new URL(req.url);
+    const filter = searchParams.get("filter"); // "all", "critical", "unread"
 
-    // Return pending alerts (Alert records) for the user's family or personal alerts
-    const where: any = { isSent: false };
-    if (familyId) where.document = { familyId };
-    else where.document = { userId: user.id };
+    // Build where clause
+    const where: any = {};
+    if (familyId) {
+      where.document = { familyId };
+    } else {
+      where.document = { userId: user.id };
+    }
+
+    // Only show alerts that haven't been snoozed
+    where.snoozedUntil = { lte: new Date() };
+
+    if (filter === "unread") {
+      where.isRead = false;
+    } else if (filter === "critical") {
+      where.document = {
+        ...where.document,
+        expirationDate: {
+          lte: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Within 7 days
+          gt: new Date(), // Not expired
+        },
+      };
+    }
 
     const alerts = await prisma.alert.findMany({
       where,

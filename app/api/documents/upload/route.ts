@@ -1,42 +1,70 @@
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
+import { put } from "@vercel/blob";
+import { auth } from "@/lib/auth";
+
+const SERVER_TOKEN = process.env.BLOB_READ_WRITE_TOKEN;
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { filename, data } = body as { filename?: string; data?: string };
-    if (!data)
-      return NextResponse.json({ error: "Missing data" }, { status: 400 });
+    // 1. Verify authentication
+    const session = await auth.api.getSession({
+      headers: req.headers,
+    });
 
-    // data expected as data:<mime>;base64,<b64>
-    const matches = data.match(/^data:(.+);base64,(.+)$/);
-    if (!matches)
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (!SERVER_TOKEN) {
+      console.error("BLOB_READ_WRITE_TOKEN not configured");
       return NextResponse.json(
-        { error: "Invalid data format" },
-        { status: 400 },
+        { error: "Server configuration error" },
+        { status: 500 },
       );
+    }
 
-    const mime = matches[1];
-    const b64 = matches[2];
+    // 2. Parse FormData
+    const formData = await req.formData();
+    const file = formData.get("file") as File;
 
-    const ext = (mime.split("/")[1] || "bin").split("+")[0];
-    const name = filename
-      ? path.basename(filename).replace(/[^a-zA-Z0-9_.-]/g, "_")
-      : `upload-${Date.now()}.${ext}`;
-    const uploadsDir = path.join(process.cwd(), "public", "uploads");
-    if (!fs.existsSync(uploadsDir))
-      fs.mkdirSync(uploadsDir, { recursive: true });
+    if (!file) {
+      return NextResponse.json({ error: "No file provided" }, { status: 400 });
+    }
 
-    const outPath = path.join(uploadsDir, name);
-    fs.writeFileSync(outPath, Buffer.from(b64, "base64"));
+    // 3. Validate file
+    const maxSize = 50 * 1024 * 1024; // 50MB
+    if (file.size > maxSize) {
+      return NextResponse.json(
+        { error: `File size exceeds ${maxSize / (1024 * 1024)}MB limit` },
+        { status: 413 },
+      );
+    }
 
-    const url = `/uploads/${encodeURIComponent(name)}`;
-    return NextResponse.json({ url }, { status: 201 });
-  } catch (err) {
-    console.error("Upload error:", err);
+    // 4. Generate unique filename
+    const timestamp = Date.now();
+    const sanitizedName = file.name.replace(/[^a-zA-Z0-9_.-]/g, "_");
+    const filename = `documents/${timestamp}-${sanitizedName}`;
+
+    // 5. Upload to Vercel Blob (server-side - no CORS issues)
+    const blob = await put(filename, file, {
+      access: "public",
+      token: SERVER_TOKEN,
+    });
+
+    // 6. Return the blob URL
+    return NextResponse.json({
+      url: blob.url,
+      filename: blob.filename,
+      contentType: file.type,
+    });
+  } catch (error: any) {
+    console.error("Upload error:", error);
     return NextResponse.json(
-      { error: "Internal Server Error" },
+      {
+        error: error.message || "Upload failed",
+        details:
+          process.env.NODE_ENV === "development" ? error.toString() : undefined,
+      },
       { status: 500 },
     );
   }

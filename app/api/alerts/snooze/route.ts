@@ -30,11 +30,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const daysNum = typeof days === "number" ? days : parseInt(days || "7", 10);
-    const newTrigger = new Date(Date.now() + daysNum * 24 * 60 * 60 * 1000);
+    const snoozedUntil = new Date(Date.now() + daysNum * 24 * 60 * 60 * 1000);
 
     await prisma.alert.update({
       where: { id },
-      data: { triggerDate: newTrigger, isSent: false },
+      data: { snoozedUntil, isRead: false },
     });
 
     return NextResponse.json({ ok: true });

@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { documentSchema, DocumentInput } from "@/lib/validations/document";
-import { put as vercelClientPut } from "@vercel/blob/client";
 import { FaSave } from "react-icons/fa";
 
 export default function NewDocumentPage() {
@@ -30,28 +29,22 @@ export default function NewDocumentPage() {
     try {
       let fileUrl = data.fileUrl;
       if (file) {
-        // Request a presigned URL from the server
-        const presignRes = await fetch("/api/documents/presign", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            filename: file.name,
-            contentType: file.type || "application/octet-stream",
-          }),
-        });
-        if (!presignRes.ok) {
-          const err = await presignRes.json().catch(() => ({}));
-          throw new Error(err?.error || "Presign failed");
-        }
-        const { clientToken, key, publicUrl } = await presignRes.json();
+        // Upload file to server API (server handles Vercel Blob upload securely)
+        const formData = new FormData();
+        formData.append("file", file);
 
-        // Upload file directly using Vercel Blob client SDK and the generated client token
-        await vercelClientPut(key, file as any, {
-          access: "public",
-          token: clientToken,
-          contentType: file.type || "application/octet-stream",
+        const uploadRes = await fetch("/api/documents/upload", {
+          method: "POST",
+          body: formData,
         });
-        fileUrl = publicUrl;
+
+        if (!uploadRes.ok) {
+          const err = await uploadRes.json().catch(() => ({}));
+          throw new Error(err?.error || "Upload failed");
+        }
+
+        const { url } = await uploadRes.json();
+        fileUrl = url;
       }
 
       const payload = { ...data, fileUrl };
