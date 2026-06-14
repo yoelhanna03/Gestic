@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     // 6. Return the blob URL
     return NextResponse.json({
       url: blob.url,
-      filename: blob.filename,
+      filename: file.name,
       contentType: file.type,
     });
   } catch (error: any) {
