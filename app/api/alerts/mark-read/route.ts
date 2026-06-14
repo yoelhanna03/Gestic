@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
 
     await prisma.alert.update({
       where: { id },
-      data: { isRead: true, isSent: true },
+      data: { isRead: true, isSent: true } as Prisma.AlertUpdateInput,
     });
 
     return NextResponse.json({ ok: true });

@@ -5,6 +5,7 @@ import {
   FaUsers,
   FaShieldAlt,
   FaExclamationTriangle,
+  FaStar,
 } from "react-icons/fa";
 import Link from "next/link";
 import { PrismaClient } from "@prisma/client";
@@ -26,25 +27,50 @@ export default async function DashboardPage() {
   let documentsCount = 0;
   let alertsCount = 0;
   let membersCount = 0;
+  let favoriteCount = 0;
+  let expiring7DaysCount = 0;
+  let expiring30DaysCount = 0;
   let recentDocs: any[] = [];
   let recentAlerts: any[] = [];
+  let typeBreakdown: any[] = [];
   let subscription: any = null;
+
+  const now = new Date();
+  const next7Days = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  const next30Days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
   if (familyId) {
     [
       documentsCount,
+      favoriteCount,
       alertsCount,
+      expiring7DaysCount,
+      expiring30DaysCount,
       membersCount,
       recentDocs,
       recentAlerts,
+      typeBreakdown,
       subscription,
     ] = await Promise.all([
       prisma.document.count({ where: { familyId } }),
+      prisma.document.count({ where: { familyId, isFavorite: true } }),
       prisma.alert.count({
         where: {
           isRead: false,
           document: { familyId },
-          OR: [{ snoozedUntil: null }, { snoozedUntil: { lte: new Date() } }],
+          OR: [{ snoozedUntil: null }, { snoozedUntil: { lte: now } }],
+        },
+      }),
+      prisma.document.count({
+        where: {
+          familyId,
+          expirationDate: { gte: now, lte: next7Days },
+        },
+      }),
+      prisma.document.count({
+        where: {
+          familyId,
+          expirationDate: { gte: now, lte: next30Days },
         },
       }),
       prisma.user.count({ where: { familyId } }),
@@ -57,43 +83,75 @@ export default async function DashboardPage() {
         where: {
           isRead: false,
           document: { familyId },
-          OR: [{ snoozedUntil: null }, { snoozedUntil: { lte: new Date() } }],
+          OR: [{ snoozedUntil: null }, { snoozedUntil: { lte: now } }],
         },
         include: { document: true },
         orderBy: { triggerDate: "asc" },
         take: 3,
       }),
+      prisma.document.groupBy({
+        by: ["type"],
+        _count: { type: true },
+        where: { familyId },
+      }),
       prisma.subscription.findUnique({ where: { familyId } }),
     ]);
   } else {
     // If user has no family in session yet, fall back to user-scoped queries
-    [documentsCount, alertsCount, membersCount, recentDocs, recentAlerts] =
-      await Promise.all([
-        prisma.document.count({ where: { userId: user.id } }),
-        prisma.alert.count({
-          where: {
-            isRead: false,
-            document: { userId: user.id },
-            OR: [{ snoozedUntil: null }, { snoozedUntil: { lte: new Date() } }],
-          },
-        }),
-        prisma.user.count({ where: { id: user.id } }),
-        prisma.document.findMany({
-          where: { userId: user.id },
-          orderBy: { createdAt: "desc" },
-          take: 3,
-        }),
-        prisma.alert.findMany({
-          where: {
-            isRead: false,
-            document: { userId: user.id },
-            OR: [{ snoozedUntil: null }, { snoozedUntil: { lte: new Date() } }],
-          },
-          include: { document: true },
-          orderBy: { triggerDate: "asc" },
-          take: 3,
-        }),
-      ]);
+    [
+      documentsCount,
+      favoriteCount,
+      alertsCount,
+      expiring7DaysCount,
+      expiring30DaysCount,
+      membersCount,
+      recentDocs,
+      recentAlerts,
+      typeBreakdown,
+    ] = await Promise.all([
+      prisma.document.count({ where: { userId: user.id } }),
+      prisma.document.count({ where: { userId: user.id, isFavorite: true } }),
+      prisma.alert.count({
+        where: {
+          isRead: false,
+          document: { userId: user.id },
+          OR: [{ snoozedUntil: null }, { snoozedUntil: { lte: now } }],
+        },
+      }),
+      prisma.document.count({
+        where: {
+          userId: user.id,
+          expirationDate: { gte: now, lte: next7Days },
+        },
+      }),
+      prisma.document.count({
+        where: {
+          userId: user.id,
+          expirationDate: { gte: now, lte: next30Days },
+        },
+      }),
+      prisma.user.count({ where: { id: user.id } }),
+      prisma.document.findMany({
+        where: { userId: user.id },
+        orderBy: { createdAt: "desc" },
+        take: 3,
+      }),
+      prisma.alert.findMany({
+        where: {
+          isRead: false,
+          document: { userId: user.id },
+          OR: [{ snoozedUntil: null }, { snoozedUntil: { lte: now } }],
+        },
+        include: { document: true },
+        orderBy: { triggerDate: "asc" },
+        take: 3,
+      }),
+      prisma.document.groupBy({
+        by: ["type"],
+        _count: { type: true },
+        where: { userId: user.id },
+      }),
+    ]);
     subscription = null;
   }
 
@@ -106,18 +164,18 @@ export default async function DashboardPage() {
       bg: "bg-blue-100",
     },
     {
+      label: "Favoris",
+      value: String(favoriteCount),
+      icon: <FaStar />,
+      color: "text-yellow-600",
+      bg: "bg-yellow-100",
+    },
+    {
       label: "Alertes actives",
       value: String(alertsCount),
       icon: <FaBell />,
       color: "text-amber-600",
       bg: "bg-amber-100",
-    },
-    {
-      label: "Membres famille",
-      value: String(membersCount),
-      icon: <FaUsers />,
-      color: "text-emerald-600",
-      bg: "bg-emerald-100",
     },
     {
       label: "Plan",
@@ -173,6 +231,86 @@ export default async function DashboardPage() {
             <div className="text-sm text-muted-foreground">{stat.label}</div>
           </div>
         ))}
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-[2fr_1fr] gap-6">
+        <div className="p-6 rounded-2xl bg-card border border-border shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+            <div>
+              <h2 className="text-xl font-semibold">Vue rapide</h2>
+              <p className="text-sm text-muted-foreground">
+                Actions et échéances importantes pour votre coffre-fort.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/dashboard/documents/new"
+                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition"
+              >
+                Nouveau document
+              </Link>
+              <Link
+                href="/dashboard/alerts"
+                className="px-4 py-2 rounded-lg border border-border text-sm font-semibold text-muted-foreground hover:bg-muted/80 transition"
+              >
+                Voir les alertes
+              </Link>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
+              <div className="text-xs uppercase tracking-[0.2em] font-semibold text-slate-500 mb-3">
+                À venir 7 jours
+              </div>
+              <div className="text-3xl font-bold">{expiring7DaysCount}</div>
+              <div className="text-sm text-muted-foreground mt-2">
+                documents expirant bientôt.
+              </div>
+            </div>
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
+              <div className="text-xs uppercase tracking-[0.2em] font-semibold text-slate-500 mb-3">
+                À venir 30 jours
+              </div>
+              <div className="text-3xl font-bold">{expiring30DaysCount}</div>
+              <div className="text-sm text-muted-foreground mt-2">
+                documents à surveiller.
+              </div>
+            </div>
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
+              <div className="text-xs uppercase tracking-[0.2em] font-semibold text-slate-500 mb-3">
+                Favoris
+              </div>
+              <div className="text-3xl font-bold">{favoriteCount}</div>
+              <div className="text-sm text-muted-foreground mt-2">
+                documents épinglés.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6 rounded-2xl bg-card border border-border shadow-sm">
+          <h3 className="text-lg font-bold mb-4">Catégories principales</h3>
+          <div className="space-y-3">
+            {typeBreakdown.length === 0 ? (
+              <div className="text-sm text-muted-foreground">
+                Aucune catégorie disponible.
+              </div>
+            ) : (
+              typeBreakdown.map((group) => (
+                <div
+                  key={group.type}
+                  className="flex items-center justify-between p-3 rounded-xl bg-background border border-border"
+                >
+                  <span className="text-sm font-medium">{group.type}</span>
+                  <span className="text-sm font-semibold text-muted-foreground">
+                    {group._count.type}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
