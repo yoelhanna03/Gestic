@@ -37,6 +37,7 @@ Copiez le fichier `.env.example` et configurez les variables suivantes :
 | `EMAIL_FROM`                         | Adresse e-mail d'expédition utilisée pour les emails (doit être validée chez Resend)                                               | Resend               |
 | `STRIPE_SECRET_KEY`                  | Clé secrète Stripe                                                                                                                 | Dashboard Stripe     |
 | `STRIPE_WEBHOOK_SECRET`              | Secret du Webhook Stripe                                                                                                           | Dashboard Stripe     |
+| `STRIPE_PRICE_ID`                    | Stripe Price ID pour l’abonnement Premium                                                                                          | Dashboard Stripe     |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Clé publique Stripe                                                                                                                | Dashboard Stripe     |
 | `NEXT_PUBLIC_APP_URL`                | URL publique de l'application                                                                                                      | Déploiement          |
 | `CRON_SECRET`                        | Clé de sécurité pour l'API de scan                                                                                                 | Généré aléatoirement |

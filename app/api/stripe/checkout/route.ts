@@ -49,12 +49,23 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    const priceId = process.env.STRIPE_PRICE_ID;
+    if (!priceId) {
+      console.error(
+        "Stripe Checkout Error: missing STRIPE_PRICE_ID environment variable",
+      );
+      return NextResponse.json(
+        { error: "Stripe price configuration is missing." },
+        { status: 500 },
+      );
+    }
+
     // We use the familyId as client_reference_id to identify the family in the webhook
     const checkoutSession = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: [
         {
-          price: "price_H5Y7fS2pL8K1", // This should be a real Price ID from Stripe Dashboard
+          price: priceId,
           quantity: 1,
         },
       ],
