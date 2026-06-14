@@ -1,5 +1,12 @@
 import React from "react";
-import { FaFileAlt, FaBell, FaUsers, FaShieldAlt } from "react-icons/fa";
+import {
+  FaFileAlt,
+  FaBell,
+  FaUsers,
+  FaShieldAlt,
+  FaExclamationTriangle,
+} from "react-icons/fa";
+import Link from "next/link";
 import { PrismaClient } from "@prisma/client";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
@@ -20,35 +27,55 @@ export default async function DashboardPage() {
   let alertsCount = 0;
   let membersCount = 0;
   let recentDocs: any[] = [];
+  let recentAlerts: any[] = [];
   let subscription: any = null;
 
   if (familyId) {
-    [documentsCount, alertsCount, membersCount, recentDocs, subscription] =
-      await Promise.all([
-        prisma.document.count({ where: { familyId } }),
-        prisma.document.count({
-          where: {
-            familyId,
-            expirationDate: {
-              lte: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
-            },
-          },
-        }),
-        prisma.user.count({ where: { familyId } }),
-        prisma.document.findMany({
-          where: { familyId },
-          orderBy: { createdAt: "desc" },
-          take: 3,
-        }),
-        prisma.subscription.findUnique({ where: { familyId } }),
-      ]);
+    [
+      documentsCount,
+      alertsCount,
+      membersCount,
+      recentDocs,
+      recentAlerts,
+      subscription,
+    ] = await Promise.all([
+      prisma.document.count({ where: { familyId } }),
+      prisma.alert.count({
+        where: {
+          isRead: false,
+          document: { familyId },
+          OR: [{ snoozedUntil: null }, { snoozedUntil: { lte: new Date() } }],
+        },
+      }),
+      prisma.user.count({ where: { familyId } }),
+      prisma.document.findMany({
+        where: { familyId },
+        orderBy: { createdAt: "desc" },
+        take: 3,
+      }),
+      prisma.alert.findMany({
+        where: {
+          isRead: false,
+          document: { familyId },
+          OR: [{ snoozedUntil: null }, { snoozedUntil: { lte: new Date() } }],
+        },
+        include: { document: true },
+        orderBy: { triggerDate: "asc" },
+        take: 3,
+      }),
+      prisma.subscription.findUnique({ where: { familyId } }),
+    ]);
   } else {
-    // If user has no family in session yet, fall back to user-scoped queries so newly created documents are visible
-    [documentsCount, alertsCount, membersCount, recentDocs, subscription] =
+    // If user has no family in session yet, fall back to user-scoped queries
+    [documentsCount, alertsCount, membersCount, recentDocs, recentAlerts] =
       await Promise.all([
         prisma.document.count({ where: { userId: user.id } }),
         prisma.alert.count({
-          where: { document: { userId: user.id }, isSent: false },
+          where: {
+            isRead: false,
+            document: { userId: user.id },
+            OR: [{ snoozedUntil: null }, { snoozedUntil: { lte: new Date() } }],
+          },
         }),
         prisma.user.count({ where: { id: user.id } }),
         prisma.document.findMany({
@@ -56,7 +83,16 @@ export default async function DashboardPage() {
           orderBy: { createdAt: "desc" },
           take: 3,
         }),
-        null,
+        prisma.alert.findMany({
+          where: {
+            isRead: false,
+            document: { userId: user.id },
+            OR: [{ snoozedUntil: null }, { snoozedUntil: { lte: new Date() } }],
+          },
+          include: { document: true },
+          orderBy: { triggerDate: "asc" },
+          take: 3,
+        }),
       ]);
     subscription = null;
   }
@@ -91,6 +127,22 @@ export default async function DashboardPage() {
       bg: "bg-indigo-100",
     },
   ];
+
+  function getSeverity(expirationDate: string | null) {
+    if (!expirationDate)
+      return { label: "Info", color: "blue", bgColor: "sky" };
+    const exp = new Date(expirationDate);
+    const now = new Date();
+    const diffDays = Math.ceil(
+      (exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+    );
+    if (diffDays < 0) return { label: "Expiré", color: "red", bgColor: "red" };
+    if (diffDays <= 7)
+      return { label: "Critique", color: "orange", bgColor: "amber" };
+    if (diffDays <= 30)
+      return { label: "Important", color: "amber", bgColor: "amber" };
+    return { label: "Info", color: "blue", bgColor: "sky" };
+  }
 
   return (
     <div className="space-y-8">
@@ -153,18 +205,62 @@ export default async function DashboardPage() {
         </div>
 
         <div className="p-6 rounded-2xl bg-card border border-border shadow-sm">
-          <h3 className="text-lg font-bold mb-4">Échéances proches</h3>
-          <div className="space-y-4">
-            <div className="text-sm text-muted-foreground">
-              Vous avez {alertsCount} document(s) expiré(s) ou proche(s)
-              d'expiration.
-            </div>
-            <a
-              href="/dashboard/alerts"
-              className="w-full inline-block py-2 text-sm font-medium text-primary hover:underline text-center"
-            >
-              Voir toutes les alertes
-            </a>
+          <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+            <FaExclamationTriangle className="text-amber-600" />
+            Alertes récentes
+          </h3>
+          <div className="space-y-3">
+            {recentAlerts.length === 0 ? (
+              <div className="text-sm text-muted-foreground text-center py-4">
+                Aucune alerte pour le moment.
+              </div>
+            ) : (
+              <>
+                {recentAlerts.map((alert: any) => {
+                  const doc = alert.document;
+                  const sev = getSeverity(doc?.expirationDate ?? null);
+                  return (
+                    <div
+                      key={alert.id}
+                      className={`p-3 rounded-lg border-2 ${
+                        sev.color === "red"
+                          ? "border-red-200 bg-red-50"
+                          : "border-amber-200 bg-amber-50"
+                      }`}
+                    >
+                      <div className="flex items-start gap-2">
+                        <FaExclamationTriangle
+                          className={`flex-shrink-0 mt-1 ${
+                            sev.color === "red"
+                              ? "text-red-600"
+                              : "text-amber-600"
+                          }`}
+                          size={14}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold line-clamp-1">
+                            {doc?.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {doc?.expirationDate
+                              ? new Date(doc.expirationDate).toLocaleDateString(
+                                  "fr-FR",
+                                )
+                              : "N/A"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                <Link
+                  href="/dashboard/alerts"
+                  className="w-full inline-block py-2 text-sm font-medium text-primary hover:underline text-center border-t border-border mt-3 pt-3"
+                >
+                  Voir toutes les alertes ({alertsCount})
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>

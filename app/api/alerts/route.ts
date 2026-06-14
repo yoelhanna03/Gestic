@@ -16,15 +16,14 @@ export async function GET(req: NextRequest) {
     const filter = searchParams.get("filter"); // "all", "critical", "unread"
 
     // Build where clause
-    const where: any = {};
+    const where: any = {
+      OR: [{ snoozedUntil: null }, { snoozedUntil: { lte: new Date() } }],
+    };
     if (familyId) {
       where.document = { familyId };
     } else {
       where.document = { userId: user.id };
     }
-
-    // Only show alerts that haven't been snoozed
-    where.snoozedUntil = { lte: new Date() };
 
     if (filter === "unread") {
       where.isRead = false;
