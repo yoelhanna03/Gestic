@@ -33,13 +33,22 @@ export default async function BillingPage() {
     );
   }
 
+  const hasStripeCustomer = !!subscription?.stripeCustomerId;
+  const actionMode = hasStripeCustomer ? "portal" : "checkout";
+  const actionLabel = hasStripeCustomer
+    ? "Accéder au portail de facturation"
+    : "Passer au Premium";
+  const actionMessage = hasStripeCustomer
+    ? "Gérez votre abonnement et consultez vos factures Stripe."
+    : familyId
+    ? "Aucun abonnement Stripe n'est associé à votre compte. Passez au Premium pour en créer un."
+    : "Votre famille sera créée automatiquement lorsque vous passerez au Premium.";
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Facturation</h1>
-        <p className="text-muted-foreground">
-          Gérez votre abonnement et accédez aux factures via Stripe.
-        </p>
+        <p className="text-muted-foreground">{actionMessage}</p>
       </div>
 
       <div className="bg-card p-6 rounded-2xl border border-border shadow-sm max-w-2xl">
@@ -50,8 +59,14 @@ export default async function BillingPage() {
           </div>
         </div>
 
-        <div>
-          <PortalButton />
+        <div className="space-y-4">
+          <PortalButton mode={actionMode} label={actionLabel} />
+          {!hasStripeCustomer && (
+            <div className="text-sm text-muted-foreground">
+              En passant au Premium, vous pourrez stocker plus de documents et
+              gérer vos factures via Stripe.
+            </div>
+          )}
         </div>
       </div>
     </div>
