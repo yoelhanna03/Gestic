@@ -41,8 +41,8 @@ export default async function BillingPage() {
   const actionMessage = hasStripeCustomer
     ? "Gérez votre abonnement et consultez vos factures Stripe."
     : familyId
-    ? "Aucun abonnement Stripe n'est associé à votre compte. Passez au Premium pour en créer un."
-    : "Votre famille sera créée automatiquement lorsque vous passerez au Premium.";
+      ? "Aucun abonnement Stripe n'est associé à votre compte. Passez au Premium pour en créer un."
+      : "Votre famille sera créée automatiquement lorsque vous passerez au Premium.";
 
   return (
     <div className="space-y-6">

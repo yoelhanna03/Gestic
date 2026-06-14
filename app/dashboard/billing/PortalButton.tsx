@@ -13,7 +13,8 @@ export default function PortalButton({ mode, label }: PortalButtonProps) {
   async function handleClick() {
     try {
       setLoading(true);
-      const endpoint = mode === "portal" ? "/api/stripe/portal" : "/api/stripe/checkout";
+      const endpoint =
+        mode === "portal" ? "/api/stripe/portal" : "/api/stripe/checkout";
       const res = await fetch(endpoint, { method: "POST" });
       const body = await res.json();
       if (body?.url) {

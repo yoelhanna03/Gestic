@@ -36,5 +36,8 @@ Thumbs.db
 *.swp
 *.log
 
+# Local build/dev artifacts
+tsconfig.tsbuildinfo
+
 # Better Auth / Session storage if any local
 .claude/
