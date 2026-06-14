@@ -16,11 +16,23 @@ export async function POST(req: NextRequest) {
     }
 
     const user = session.user as any;
-    if (!user.familyId) {
-      return NextResponse.json({ error: "No family associated with this user" }, { status: 400 });
-    }
 
-    const familyId = user.familyId;
+    // Ensure the user belongs to a family before checkout.
+    // If the user has no family yet, create one automatically.
+    let familyId = user.familyId;
+    if (!familyId) {
+      const family = await prisma.family.create({
+        data: {
+          name: `${user.name ?? user.email ?? "User"}'s Family`,
+        },
+      });
+      familyId = family.id;
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { familyId },
+      });
+    }
 
     // Get or create subscription record to store Stripe Customer ID
     let subscription = await prisma.subscription.findUnique({
@@ -31,24 +43,24 @@ export async function POST(req: NextRequest) {
       subscription = await prisma.subscription.create({
         data: {
           familyId,
-          plan: 'FREE',
-          status: 'active',
+          plan: "FREE",
+          status: "active",
         },
       });
     }
 
     // We use the familyId as client_reference_id to identify the family in the webhook
     const checkoutSession = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
+      payment_method_types: ["card"],
       line_items: [
         {
-          price: 'price_H5Y7fS2pL8K1', // This should be a real Price ID from Stripe Dashboard
+          price: "price_H5Y7fS2pL8K1", // This should be a real Price ID from Stripe Dashboard
           quantity: 1,
         },
       ],
-      mode: 'subscription',
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard?success=true`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/billing`,
+      mode: "subscription",
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard?success=true`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard/billing`,
       client_reference_id: familyId,
       customer_email: user.email,
     });
@@ -56,6 +68,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ url: checkoutSession.url });
   } catch (error) {
     console.error("Stripe Checkout Error:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 },
+    );
   }
 }

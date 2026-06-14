@@ -32,9 +32,14 @@ export async function POST(req: NextRequest) {
     const daysNum = typeof days === "number" ? days : parseInt(days || "7", 10);
     const snoozedUntil = new Date(Date.now() + daysNum * 24 * 60 * 60 * 1000);
 
+    const updateData: Prisma.AlertUpdateInput = {
+      snoozedUntil,
+      isRead: false,
+    };
+
     await prisma.alert.update({
       where: { id },
-      data: { snoozedUntil, isRead: false } as Prisma.AlertUpdateInput,
+      data: updateData,
     });
 
     return NextResponse.json({ ok: true });
