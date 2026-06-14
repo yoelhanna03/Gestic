@@ -1,17 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { put } from "@vercel/blob";
-import { auth } from "@/lib/auth";
 
 const SERVER_TOKEN = process.env.BLOB_READ_WRITE_TOKEN;
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Verify authentication
-    const session = await auth.api.getSession({
-      headers: req.headers,
-    });
-
-    if (!session) {
+    // 1. Quick auth check via cookie
+    const cookies = req.headers.get("cookie") || "";
+    if (!cookies.includes("better-auth.session_token")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -62,8 +58,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         error: error.message || "Upload failed",
-        details:
-          process.env.NODE_ENV === "development" ? error.toString() : undefined,
       },
       { status: 500 },
     );
